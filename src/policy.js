@@ -41,11 +41,13 @@ export function classifyMotion(frame) {
 }
 
 /**
- * 采样间隔建议：行驶中 30 秒一帧，驻车时 30–120 秒。
- * 间隔太大会让「里程 / 能耗」的积分误差变大。
+ * 采样间隔建议（按场景分开，实测值）：
+ *   - 行驶中：10 秒（越密越好；里程与能耗的积分误差随间隔线性变大）
+ *   - 驻车但仍在记录：30 秒（用来确认「驻车满 5 分钟」）
+ *   - 长时间驻车：120 秒（省电、省请求）
  */
 export const POLLING = Object.freeze({
-  drivingMs: 30_000,
+  drivingMs: 10_000,
   parkedMs: 120_000,
   parkedWithRecordingMs: 30_000,
 });

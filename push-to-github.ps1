@@ -66,7 +66,9 @@ if (-not $repoExists) {
 
 if (-not (Test-Path '.git')) { throw 'not a git repository (missing .git)' }
 
-git remote remove origin 2>$null
+$ErrorActionPreference = 'Continue'
+git remote remove origin 2>&1 | Out-Null
+$ErrorActionPreference = 'Stop'
 $authUrl = "https://x-access-token:$token@github.com/$($me.login)/$RepoName.git"
 git remote add origin $authUrl
 git push -u origin main

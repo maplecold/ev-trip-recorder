@@ -6,7 +6,7 @@ It is designed for the "server records, phone only reads" setup — the car may 
 
 ```
 telemetry ──► motion ──► trip state machine ──► distance fusion ──► energy ──► trip record
-  30 s        gear/speed     5-minute parking       odometer/GPS     integration
+  10 s        gear/speed     5-minute parking       odometer/GPS     integration
 ```
 
 Zero dependencies, plain JavaScript (ESM), Node ≥ 18.
@@ -38,7 +38,7 @@ const recorder = new TripRecorder({
   onTripFinished: (trip) => saveToDatabase(trip),
 });
 
-// Feed one frame per poll (~30 s while driving)
+// Feed one frame per poll (10 s while driving, 30-120 s while parked)
 recorder.observe({
   timestamp: Date.now(),
   gear: 'D',
@@ -183,7 +183,7 @@ Normalize whatever source you have into the `frame` object:
 2. MQTT from a telematics box;
 3. a Bluetooth OBD dongle.
 
-Recommended cadence: 30 s while driving, 30–120 s while parked. Sparser sampling increases distance and energy error.
+Recommended cadence: **10 s** while driving, **30 s** while parked with recording, **120 s** for long parking. Sparser sampling increases distance and energy error.
 
 ## License
 
