@@ -1,0 +1,33 @@
+{
+  "name": "ev-trip-recorder",
+  "version": "0.1.0",
+  "description": "Vehicle-agnostic EV trip recording: start/end detection, distance fusion, energy estimation, route simplification",
+  "type": "module",
+  "main": "src/index.js",
+  "types": "index.d.ts",
+  "files": [
+    "src/",
+    "index.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test",
+    "demo": "node examples/simulate.mjs"
+  },
+  "keywords": [
+    "ev",
+    "telemetry",
+    "trip",
+    "driving-log",
+    "geofence",
+    "energy"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  }
+}
