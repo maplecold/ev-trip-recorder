@@ -1,0 +1,4 @@
+# 统一换行，避免 Windows 上 git 提示 CRLF 警告
+* text=auto eol=lf
+*.png binary
+*.jpg binary
