@@ -131,7 +131,7 @@ Points closer than `routeMinSpacingMeters` (default 8 m) are dropped; first and 
 ## Sampling cadence
 
 The algorithm does not enforce a cadence, but the interval **directly controls distance and energy error**.
-These are the values we have been running in production:
+These are the values we actually run on our own server (tune them to your API quota):
 
 | Situation | Interval | Why |
 | :--- | :--- | :--- |
@@ -149,7 +149,7 @@ These are the values we have been running in production:
 3. **If the API is rate-limited, slow down the parking phase, not the driving phase.**
    Extra parked samples are worthless; missing driving samples cost accuracy.
 
-### What sparse sampling costs
+### What sparse sampling costs (rough estimates, not measurements)
 
 | Driving interval | Distance error (GPS, short trip) | Energy error (V x I) | Frame-gap risk |
 | :--- | :--- | :--- | :--- |
