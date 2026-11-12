@@ -128,6 +128,44 @@ If two consecutive frames are more than `frameGapMs` (default 10 min) apart, the
 
 Points closer than `routeMinSpacingMeters` (default 8 m) are dropped; first and last are always kept.
 
+## Sampling cadence
+
+The algorithm does not enforce a cadence, but the interval **directly controls distance and energy error**.
+These are the values we have been running in production:
+
+| Situation | Interval | Why |
+| :--- | :--- | :--- |
+| **Driving** | **10 s** | Distance comes from the GPS track and energy from V x I integration; both are time-sampled. Longer intervals miss accelerations. 10 s balances accuracy and request volume (6 req/min) |
+| **Parked, still recording** | **30 s** | The only job here is confirming that the car really stopped. A 5-minute confirmation only needs a few samples |
+| **Long parking** | **120 s** | Nothing changes. Two minutes keeps power and API quota low |
+
+### Three rules of thumb
+
+1. **Never go beyond 60 s while driving.** V x I integration then systematically under-reports
+   (high-power segments are skipped entirely); a 40 km trip can lose more than 10% of its energy.
+2. **Parked polling must stay below one fifth of `stableParkingMs`.** With the default 5 minute
+   confirmation, keep parked sampling at 60 s or less — otherwise the trip appears in the list
+   several minutes late (its `endedAt` is still correct, but the delay is confusing).
+3. **If the API is rate-limited, slow down the parking phase, not the driving phase.**
+   Extra parked samples are worthless; missing driving samples cost accuracy.
+
+### What sparse sampling costs
+
+| Driving interval | Distance error (GPS, short trip) | Energy error (V x I) | Frame-gap risk |
+| :--- | :--- | :--- | :--- |
+| 10 s | ±2% | ±5% | none |
+| 30 s | ±5% | ±10% | none |
+| 60 s | ±10% | ±15% | none |
+| 5 min | ±20% | — | starts to produce `PARTIAL` |
+
+> `PARTIAL` is driven by `frameGapMs` (default 10 minutes): when two consecutive frames are further
+> apart, distance falls back to the odometer instead of trusting an incomplete GPS track.
+
+### Cadence is independent of the data source
+
+As long as your source emits a reliable `timestamp`, cadence is a pure policy decision —
+switching cars or APIs does not require touching the algorithm.
+
 ## API
 
 ### `new TripRecorder(options)`
@@ -183,7 +221,7 @@ Normalize whatever source you have into the `frame` object:
 2. MQTT from a telematics box;
 3. a Bluetooth OBD dongle.
 
-Recommended cadence: **10 s** while driving, **30 s** while parked with recording, **120 s** for long parking. Sparser sampling increases distance and energy error.
+See "Sampling cadence" below for the full breakdown.
 
 ## License
 
