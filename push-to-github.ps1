@@ -1,18 +1,19 @@
 <#
-把 ev-trip-recorder 推送到你的 GitHub。
+Push ev-trip-recorder to your GitHub account.
 
-用法（在 PowerShell 里运行）：
+Usage:
     cd C:\Users\Administrator\Documents\deepseek-harness\default-workspace\ev-trip-recorder
     pwsh -File .\push-to-github.ps1
 
-脚本会：
-  1. 让你粘贴一个 GitHub Personal Access Token（不会回显、不会写进任何文件）；
-  2. 用该 token 调 GitHub API 创建仓库（默认 public，可改）；
-  3. 添加 remote 并推送 main 分支；
-  4. 推送完成后把 remote URL 里的 token 去掉，避免留在 .git/config 里。
+What it does:
+  1. asks for a GitHub Personal Access Token (hidden input, never written to disk);
+  2. creates the repository through the GitHub API (public by default, use -Private otherwise);
+  3. adds the remote and pushes the main branch;
+  4. strips the token from .git/config afterwards.
 
-Token 权限：Fine-grained token 勾选 "Repository creation" + 目标仓库的 Contents: Read and write 即可；
-或者用经典 token，勾选 `repo`。
+Token scopes:
+  - Fine-grained token: "Repository creation" + target repo "Contents: Read and write".
+  - Classic token: `repo`.
 #>
 
 param(
@@ -24,13 +25,13 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-Location -LiteralPath $PSScriptRoot
 
-Write-Host '把 GitHub Personal Access Token 粘贴进来（输入不回显）：'
+Write-Host 'Paste a GitHub Personal Access Token (input is hidden):'
 $secure = Read-Host -AsSecureString
-$token = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
-    [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
-)
+$bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+$token = [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+[Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
 
-if ([string]::IsNullOrWhiteSpace($token)) { throw '没有拿到 token' }
+if ([string]::IsNullOrWhiteSpace($token)) { throw 'no token provided' }
 
 $headers = @{
     Authorization          = "Bearer $token"
@@ -39,19 +40,17 @@ $headers = @{
     'User-Agent'           = 'ev-trip-recorder-push'
 }
 
-# 1) 当前账号
 $me = Invoke-RestMethod -Uri 'https://api.github.com/user' -Headers $headers -TimeoutSec 30
-Write-Host "账号: $($me.login)"
+Write-Host "account: $($me.login)"
 
-# 2) 创建仓库（已存在则跳过）
-$exists = $true
+$repoExists = $true
 try {
     Invoke-RestMethod -Uri "https://api.github.com/repos/$($me.login)/$RepoName" -Headers $headers -TimeoutSec 30 | Out-Null
 } catch {
-    $exists = $false
+    $repoExists = $false
 }
 
-if (-not $exists) {
+if (-not $repoExists) {
     $body = @{
         name        = $RepoName
         description = $Description
@@ -60,21 +59,18 @@ if (-not $exists) {
         has_wiki    = $false
     } | ConvertTo-Json
     Invoke-RestMethod -Method Post -Uri 'https://api.github.com/user/repos' -Headers $headers -Body $body -TimeoutSec 60 | Out-Null
-    Write-Host "已创建仓库: https://github.com/$($me.login)/$RepoName"
+    Write-Host "created: https://github.com/$($me.login)/$RepoName"
 } else {
-    Write-Host "仓库已存在，直接推送: https://github.com/$($me.login)/$RepoName"
+    Write-Host "exists, pushing to: https://github.com/$($me.login)/$RepoName"
 }
 
-# 3) 推送
-if (Test-Path '.git') {
-    git remote remove origin 2>$null
-    $authUrl = "https://x-access-token:$token@github.com/$($me.login)/$RepoName.git"
-    git remote add origin $authUrl
-    git push -u origin main
-    # 4) 去掉 token
-    git remote set-url origin "https://github.com/$($me.login)/$RepoName.git"
-    Write-Host ''
-    Write-Host "完成: https://github.com/$($me.login)/$RepoName"
-} else {
-    Write-Host '当前目录不是 git 仓库（缺少 .git）'
-}
+if (-not (Test-Path '.git')) { throw 'not a git repository (missing .git)' }
+
+git remote remove origin 2>$null
+$authUrl = "https://x-access-token:$token@github.com/$($me.login)/$RepoName.git"
+git remote add origin $authUrl
+git push -u origin main
+git remote set-url origin "https://github.com/$($me.login)/$RepoName.git"
+
+Write-Host ''
+Write-Host "done: https://github.com/$($me.login)/$RepoName"
